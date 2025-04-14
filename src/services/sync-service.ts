@@ -179,6 +179,11 @@ export class SyncService {
       const commentBody = event.comment.body;
       const authorName = event.comment.user.login;
 
+      // 检查评论内容是否已经包含 "由机器人从GitHub同步" 的标记，如果包含则不再同步
+      if (commentBody.includes('🤖 此评论由机器人从GitHub同步')) {
+        return { success: true, data: '跳过机器人同步的评论，避免循环同步' };
+      }
+
       // 格式化评论内容
       const formattedBody = this.giteeService.formatCommentBody(commentBody, authorName);
 
@@ -231,6 +236,11 @@ export class SyncService {
       const issueMapping = await this.getIssueMappingByGithub(issueNumber, repoMapping.id);
       if (!issueMapping) {
         return { success: false, error: `找不到Issue映射关系: ${issueNumber}` };
+      }
+
+      // 检查评论内容是否已经包含 "由机器人从Gitee同步" 的标记，如果包含则不再同步
+      if (commentBody.includes('🤖 此评论由机器人从Gitee同步')) {
+        return { success: true, data: '跳过机器人同步的评论，避免循环同步' };
       }
 
       // 格式化评论内容
