@@ -24,6 +24,7 @@ export interface RepositoryMapping {
 export interface IssueMapping {
   id: number;
   gitee_issue_id: number;
+  gitee_issue_number: string; // 实际的Gitee issue编号，如"I123AB"
   github_issue_number: number;
   repository_id: number;
   gitee_url: string;

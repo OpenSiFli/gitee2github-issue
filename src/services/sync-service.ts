@@ -104,7 +104,7 @@ export class SyncService {
       }
 
       const issueId = event.issue.id;
-      const issueNumber = event.issue.number;
+      const issueNumber = event.issue.number; // 这是Gitee的issue编号，如I123AB
       const issueTitle = event.issue.title;
       const issueBody = event.issue.body;
       const issueUrl = event.issue.html_url;
@@ -129,9 +129,10 @@ export class SyncService {
         return { success: false, error: createResult.error };
       }
 
-      // 保存Issue映射关系
+      // 保存Issue映射关系，添加gitee_issue_number字段
       await this.saveIssueMapping({
         gitee_issue_id: issueId,
+        gitee_issue_number: issueNumber, // 保存实际的issue编号
         github_issue_number: createResult.data!.number,
         repository_id: repoMapping.id,
         gitee_url: issueUrl,
@@ -236,7 +237,12 @@ export class SyncService {
       const formattedBody = this.githubService.formatCommentBody(commentBody, authorName);
 
       // 在Gitee上创建对应的评论
-      const giteeIssueNumber = String(issueMapping.gitee_issue_id);
+      // 修改：使用gitee_issue_number而不是gitee_issue_id
+      if (!issueMapping.gitee_issue_number) {
+        return { success: false, error: `找不到对应的Gitee Issue编号` };
+      }
+
+      const giteeIssueNumber = issueMapping.gitee_issue_number; // 使用正确的issue编号
       const createResult = await this.giteeService.createComment(
         repoMapping.gitee_owner,
         repoMapping.gitee_repo,
@@ -379,12 +385,13 @@ export class SyncService {
    */
   private async saveIssueMapping(mapping: Omit<IssueMapping, 'id' | 'created_at'>): Promise<number> {
     const result = await this.env.DB.prepare(
-      `INSERT INTO issue_mappings (gitee_issue_id, github_issue_number, repository_id, gitee_url, github_url)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO issue_mappings (gitee_issue_id, gitee_issue_number, github_issue_number, repository_id, gitee_url, github_url)
+       VALUES (?, ?, ?, ?, ?, ?)
        RETURNING id`
     )
       .bind(
         mapping.gitee_issue_id,
+        mapping.gitee_issue_number,
         mapping.github_issue_number,
         mapping.repository_id,
         mapping.gitee_url,
