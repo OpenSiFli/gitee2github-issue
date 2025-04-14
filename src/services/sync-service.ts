@@ -35,7 +35,7 @@ export class SyncService {
       if (event.hook_name === 'issue_hooks' && event.action === 'open') {
         // 处理新建Issue事件
         return await this.handleGiteeNewIssue(event, eventId);
-      } else if (event.hook_name === 'issue_hooks' && event.action === 'comment') {
+      } else if ((event.hook_name === 'issue_hooks' || event.hook_name === 'note_hooks') && event.action === 'comment') {
         // 处理Issue评论事件
         return await this.handleGiteeNewComment(event, eventId);
       }
