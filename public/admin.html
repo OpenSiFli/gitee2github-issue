@@ -122,19 +122,19 @@
             <h2>添加新的仓库映射</h2>
             <div class="form-group">
                 <label for="gitee-owner">Gitee 仓库拥有者</label>
-                <input type="text" id="gitee-owner" placeholder="例如: openeuler">
+                <input type="text" id="gitee-owner" placeholder="例如: SiFli">
             </div>
             <div class="form-group">
                 <label for="gitee-repo">Gitee 仓库名称</label>
-                <input type="text" id="gitee-repo" placeholder="例如: community">
+                <input type="text" id="gitee-repo" placeholder="例如: sifli-sdk">
             </div>
             <div class="form-group">
                 <label for="github-owner">GitHub 仓库拥有者</label>
-                <input type="text" id="github-owner" placeholder="例如: open-source-alliance">
+                <input type="text" id="github-owner" placeholder="例如: OpenSiFli">
             </div>
             <div class="form-group">
                 <label for="github-repo">GitHub 仓库名称</label>
-                <input type="text" id="github-repo" placeholder="例如: community-mirror">
+                <input type="text" id="github-repo" placeholder="例如: SiFli-SDK">
             </div>
             <button id="add-mapping-btn" class="btn">添加映射</button>
         </div>
@@ -167,6 +167,8 @@
         
         // 是否已验证
         let isAuthenticated = false;
+        // 存储管理员密码，用于API授权
+        let adminToken = '';
         
         // 根据URL获取当前应用的基础URL
         const baseUrl = window.location.origin;
@@ -186,6 +188,7 @@
                 .then(data => {
                     if (data.success) {
                         isAuthenticated = true;
+                        adminToken = adminPassword.value; // 保存密码作为Token
                         authScreen.style.display = 'none';
                         mainContent.style.display = 'block';
                         loadMappings();
@@ -216,7 +219,8 @@
             fetch(`${baseUrl}/api/repository-mapping`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}` // 添加授权头
                 },
                 body: JSON.stringify({
                     gitee_owner: giteeOwner,
@@ -247,7 +251,11 @@
         
         // 加载映射列表
         function loadMappings() {
-            fetch(`${baseUrl}/api/repository-mappings`)
+            fetch(`${baseUrl}/api/repository-mappings`, {
+                headers: {
+                    'Authorization': `Bearer ${adminToken}` // 添加授权头
+                }
+            })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -297,7 +305,10 @@
         function deleteMapping(id) {
             if (confirm('确定要删除此映射吗？这可能会影响现有的issue同步关系。')) {
                 fetch(`${baseUrl}/api/repository-mapping/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}` // 添加授权头
+                    }
                 })
                 .then(response => response.json())
                 .then(data => {

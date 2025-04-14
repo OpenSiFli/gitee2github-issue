@@ -26,7 +26,7 @@
 
 1. 克隆仓库
 ```bash
-git clone https://github.com/yourusername/gitee2github-issue.git
+git clone https://github.com/OpenSiFli/gitee2github-issue.git
 cd gitee2github-issue
 ```
 
@@ -133,6 +133,7 @@ npx wrangler deploy
 
 ```bash
 curl -X POST https://<your-worker-url>/api/repository-mapping \
+  -H "Authorization: Bearer YOUR_ADMIN_PASSWORD" \
   -H "Content-Type: application/json" \
   -d '{
     "gitee_owner": "your-gitee-owner", 
@@ -172,6 +173,7 @@ curl -X POST https://<your-worker-url>/api/repository-mapping \
 | gitee_url | Gitee Issue URL |
 | github_url | GitHub Issue URL |
 | created_at | 创建时间 |
+| gitee_issue_number | Gitee Issue编号 |
 
 ### 评论映射表 (comment_mappings)
 
@@ -249,16 +251,16 @@ gitee2github-issue/
 
 ## 📋 API端点参考
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/` | `GET` | 健康检查 |
-| `/webhook/gitee` | `POST` | 接收Gitee webhook事件 |
-| `/webhook/github` | `POST` | 接收GitHub webhook事件 |
-| `/admin` | `GET` | 管理界面 |
-| `/api/auth` | `POST` | 管理界面验证 |
-| `/api/repository-mapping` | `POST` | 创建仓库映射 |
-| `/api/repository-mappings` | `GET` | 获取所有仓库映射 |
-| `/api/repository-mapping/:id` | `DELETE` | 删除仓库映射 |
+| 端点 | 方法 | 说明 | 授权要求 |
+|------|------|------|----------|
+| `/` | `GET` | 健康检查 | 不需要 |
+| `/webhook/gitee` | `POST` | 接收Gitee webhook事件 | 请求体中需包含Gitee webhook密钥 |
+| `/webhook/github` | `POST` | 接收GitHub webhook事件 | 需GitHub webhook签名验证 |
+| `/admin` | `GET` | 管理界面 | 通过UI登录验证 |
+| `/api/auth` | `POST` | 管理界面验证 | 不需要 |
+| `/api/repository-mapping` | `POST` | 创建仓库映射 | Bearer Token验证 |
+| `/api/repository-mappings` | `GET` | 获取所有仓库映射 | Bearer Token验证 |
+| `/api/repository-mapping/:id` | `DELETE` | 删除仓库映射 | Bearer Token验证 |
 
 ## 📄 许可证
 

@@ -30,8 +30,29 @@ export default {
         });
       }
 
+      // 验证API请求的辅助函数
+      const verifyApiAccess = async (req: Request): Promise<boolean> => {
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return false;
+        }
+        const token = authHeader.substring(7);
+        return token === env.ADMIN_PASSWORD;
+      };
+
       // 获取所有仓库映射
       if (path === '/api/repository-mappings' && request.method === 'GET') {
+        // 验证访问权限
+        if (!await verifyApiAccess(request)) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: '未授权访问'
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 401
+          });
+        }
+        
         const mappings = await syncService.getAllRepositoryMappings();
         return new Response(JSON.stringify({
           success: true,
@@ -43,6 +64,17 @@ export default {
 
       // 删除仓库映射
       if (path.match(/^\/api\/repository-mapping\/\d+$/) && request.method === 'DELETE') {
+        // 验证访问权限
+        if (!await verifyApiAccess(request)) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: '未授权访问'
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 401
+          });
+        }
+        
         const id = parseInt(path.split('/').pop() || '0', 10);
         const result = await syncService.deleteRepositoryMapping(id);
         
@@ -81,6 +113,17 @@ export default {
 
       // 添加仓库映射关系接口
       if (path === '/api/repository-mapping' && request.method === 'POST') {
+        // 验证访问权限
+        if (!await verifyApiAccess(request)) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: '未授权访问'
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 401
+          });
+        }
+        
         const data = await request.json() as any;
         const { gitee_owner, gitee_repo, github_owner, github_repo } = data;
         
