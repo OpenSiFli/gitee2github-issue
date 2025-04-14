@@ -6,18 +6,16 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // 处理静态资源
+    // 如果请求路径是 /admin，返回 admin.html 页面
+    if (path === '/admin' || path === '/admin/') {
+      return env.ASSETS.fetch(new Request('https://placeholder/admin.html', request));
+    }
+
     // 创建同步服务实例
     const syncService = new SyncService(env);
 
     try {
-      // 处理静态资源 - 管理界面
-      if (path === '/admin' || path === '/admin/') {
-        const adminHtml = await fetch(new URL('./static/admin.html', import.meta.url).href);
-        return new Response(await adminHtml.text(), {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
-      }
-
       // 验证管理员访问
       if (path === '/api/auth' && request.method === 'POST') {
         const data = await request.json() as any;

@@ -7,6 +7,7 @@ export interface Env {
   GITEE_WEBHOOK_SECRET: string;
   GITHUB_WEBHOOK_SECRET: string;
   ADMIN_PASSWORD: string;  // 管理界面访问密码
+  ASSETS: { fetch: (request: Request) => Promise<Response> }; // 静态资源绑定
 }
 
 // 仓库映射类型

@@ -28,7 +28,16 @@
 	 */
 	"vars": { 
 		"GITHUB_API_BASE_URL": "https://api.github.com"
+	},
+
+	/**
+	 * 静态资源绑定
+	 */
+	"assets": {
+		"directory": "public",
+		"binding": "ASSETS"
 	}
+
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
