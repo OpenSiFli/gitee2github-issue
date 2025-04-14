@@ -6,10 +6,34 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "gitee2github-issue",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-04-14",
+	"compatibility_date": "2023-11-01",
 	"observability": {
 		"enabled": true
+	},
+
+	/**
+	 * D1数据库配置
+	 */
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "gitee2github_db",
+			"database_id": "83daab30-6e1e-438d-80e6-638fb0b49487"
+		}
+	],
+
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	"vars": { 
+		"GITHUB_API_BASE_URL": "https://api.github.com"
 	}
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -21,16 +45,6 @@
 	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 	 * databases, object storage, AI inference, real-time communication and more.
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" },
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
 
 	/**

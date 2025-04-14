@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gitee和GitHub仓库映射管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #0366d6;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .btn {
+            cursor: pointer;
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f1f1f1;
+        }
+        tr:hover {
+            background-color: #f8f8f8;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .auth-form {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-screen" class="auth-form card">
+        <h2>管理员验证</h2>
+        <div class="form-group">
+            <label for="admin-password">访问密码</label>
+            <input type="password" id="admin-password" placeholder="请输入访问密码">
+        </div>
+        <button id="login-btn" class="btn">登录</button>
+    </div>
+    
+    <div id="main-content" style="display: none;">
+        <h1>Gitee和GitHub仓库映射管理</h1>
+        
+        <div class="alert alert-success" id="success-alert"></div>
+        <div class="alert alert-danger" id="error-alert"></div>
+        
+        <div class="card">
+            <h2>添加新的仓库映射</h2>
+            <div class="form-group">
+                <label for="gitee-owner">Gitee 仓库拥有者</label>
+                <input type="text" id="gitee-owner" placeholder="例如: openeuler">
+            </div>
+            <div class="form-group">
+                <label for="gitee-repo">Gitee 仓库名称</label>
+                <input type="text" id="gitee-repo" placeholder="例如: community">
+            </div>
+            <div class="form-group">
+                <label for="github-owner">GitHub 仓库拥有者</label>
+                <input type="text" id="github-owner" placeholder="例如: open-source-alliance">
+            </div>
+            <div class="form-group">
+                <label for="github-repo">GitHub 仓库名称</label>
+                <input type="text" id="github-repo" placeholder="例如: community-mirror">
+            </div>
+            <button id="add-mapping-btn" class="btn">添加映射</button>
+        </div>
+        
+        <div class="card">
+            <h2>现有仓库映射</h2>
+            <table id="mappings-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Gitee 仓库</th>
+                        <th>GitHub 仓库</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="mappings-list">
+                    <!-- 映射列表将在这里动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 简单的页面访问控制
+        const authScreen = document.getElementById('auth-screen');
+        const mainContent = document.getElementById('main-content');
+        const loginBtn = document.getElementById('login-btn');
+        const adminPassword = document.getElementById('admin-password');
+        
+        // 是否已验证
+        let isAuthenticated = false;
+        
+        // 根据URL获取当前应用的基础URL
+        const baseUrl = window.location.origin;
+        
+        // 验证密码 (实际生产环境应该使用更安全的方式)
+        loginBtn.addEventListener('click', () => {
+            // 此处密码检查逻辑只是一个简单的示例，实际应由后端验证
+            if (adminPassword.value) {
+                fetch(`${baseUrl}/api/auth`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: adminPassword.value })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isAuthenticated = true;
+                        authScreen.style.display = 'none';
+                        mainContent.style.display = 'block';
+                        loadMappings();
+                    } else {
+                        showAlert('error-alert', '密码错误，请重试');
+                    }
+                })
+                .catch(error => {
+                    showAlert('error-alert', '验证失败: ' + error.message);
+                });
+            }
+        });
+        
+        // 添加映射按钮点击事件
+        document.getElementById('add-mapping-btn').addEventListener('click', () => {
+            const giteeOwner = document.getElementById('gitee-owner').value;
+            const giteeRepo = document.getElementById('gitee-repo').value;
+            const githubOwner = document.getElementById('github-owner').value;
+            const githubRepo = document.getElementById('github-repo').value;
+            
+            // 检查输入
+            if (!giteeOwner || !giteeRepo || !githubOwner || !githubRepo) {
+                showAlert('error-alert', '请填写所有字段');
+                return;
+            }
+            
+            // 发送请求创建映射
+            fetch(`${baseUrl}/api/repository-mapping`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    gitee_owner: giteeOwner,
+                    gitee_repo: giteeRepo,
+                    github_owner: githubOwner,
+                    github_repo: githubRepo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success-alert', '映射创建成功');
+                    // 清空输入框
+                    document.getElementById('gitee-owner').value = '';
+                    document.getElementById('gitee-repo').value = '';
+                    document.getElementById('github-owner').value = '';
+                    document.getElementById('github-repo').value = '';
+                    // 重新加载映射列表
+                    loadMappings();
+                } else {
+                    showAlert('error-alert', '映射创建失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                showAlert('error-alert', '请求失败: ' + error.message);
+            });
+        });
+        
+        // 加载映射列表
+        function loadMappings() {
+            fetch(`${baseUrl}/api/repository-mappings`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const mappingsTableBody = document.getElementById('mappings-list');
+                    mappingsTableBody.innerHTML = '';
+                    
+                    data.data.forEach(mapping => {
+                        const row = document.createElement('tr');
+                        
+                        const idCell = document.createElement('td');
+                        idCell.textContent = mapping.id;
+                        
+                        const giteeCell = document.createElement('td');
+                        giteeCell.textContent = `${mapping.gitee_owner}/${mapping.gitee_repo}`;
+                        
+                        const githubCell = document.createElement('td');
+                        githubCell.textContent = `${mapping.github_owner}/${mapping.github_repo}`;
+                        
+                        const createdAtCell = document.createElement('td');
+                        createdAtCell.textContent = new Date(mapping.created_at).toLocaleString();
+                        
+                        const actionsCell = document.createElement('td');
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.textContent = '删除';
+                        deleteBtn.addEventListener('click', () => deleteMapping(mapping.id));
+                        actionsCell.appendChild(deleteBtn);
+                        
+                        row.appendChild(idCell);
+                        row.appendChild(giteeCell);
+                        row.appendChild(githubCell);
+                        row.appendChild(createdAtCell);
+                        row.appendChild(actionsCell);
+                        
+                        mappingsTableBody.appendChild(row);
+                    });
+                } else {
+                    showAlert('error-alert', '加载映射失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                showAlert('error-alert', '请求失败: ' + error.message);
+            });
+        }
+        
+        // 删除映射
+        function deleteMapping(id) {
+            if (confirm('确定要删除此映射吗？这可能会影响现有的issue同步关系。')) {
+                fetch(`${baseUrl}/api/repository-mapping/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success-alert', '映射删除成功');
+                        loadMappings();
+                    } else {
+                        showAlert('error-alert', '映射删除失败: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    showAlert('error-alert', '请求失败: ' + error.message);
+                });
+            }
+        }
+        
+        // 显示提示框
+        function showAlert(id, message) {
+            const alert = document.getElementById(id);
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
