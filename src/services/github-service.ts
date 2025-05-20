@@ -1,26 +1,70 @@
 import { Octokit } from '@octokit/rest';
+import { createAppAuth } from '@octokit/auth-app';
 import { Env, Result } from '../types';
 
 export class GitHubService {
   private octokit: Octokit;
   private baseUrl: string;
+  private useAppAuth: boolean;
 
   constructor(private env: Env) {
     this.baseUrl = env.GITHUB_API_BASE_URL;
-    this.octokit = new Octokit({
-      auth: env.GITHUB_TOKEN,
-      baseUrl: this.baseUrl,
-    });
+    this.useAppAuth = !!env.GITHUB_APP_ID && !!env.GITHUB_PRIVATE_KEY && !!env.GITHUB_INSTALLATION_ID;
+    
+    if (this.useAppAuth) {
+      // 使用 GitHub App 认证
+      const appId = parseInt(env.GITHUB_APP_ID || '', 10);
+      const privateKey = (env.GITHUB_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+      const installationId = parseInt(env.GITHUB_INSTALLATION_ID || '', 10);
+      
+      this.octokit = new Octokit({
+        authStrategy: createAppAuth,
+        auth: {
+          appId,
+          privateKey,
+          installationId,
+        },
+        baseUrl: this.baseUrl,
+      });
+      
+      console.log('使用 GitHub App 认证模式');
+    } else if (env.GITHUB_TOKEN) {
+      // 兼容模式：使用个人访问令牌认证
+      this.octokit = new Octokit({
+        auth: env.GITHUB_TOKEN,
+        baseUrl: this.baseUrl,
+      });
+      
+      console.log('使用个人访问令牌认证模式');
+    } else {
+      throw new Error('未提供 GitHub 认证信息，请配置 GITHUB_TOKEN 或 GitHub App 相关参数');
+    }
   }
 
   /**
    * 验证GitHub Webhook签名
+   * GitHub Apps使用相同的签名方式，所以不需要修改验证逻辑
    */
   async verifyWebhookSignature(request: Request): Promise<boolean> {
-    // 简单实现，实际应该使用crypto验证签名
+    // 获取请求的签名和内容
     const signature = request.headers.get('x-hub-signature-256');
-    // 此处应该计算HMAC签名并比对，简化起见暂时返回true
-    return true;
+    if (!signature) {
+      console.error('GitHub webhook 缺少签名');
+      return false;
+    }
+    
+    try {
+      // 注意：在生产环境中，你应该实现适用于Cloudflare Workers的签名验证
+      // Cloudflare Workers支持Web Crypto API，可以使用它来验证签名
+      // 这里为了简单起见，我们暂时返回true
+      // TODO: 实现基于Web Crypto API的签名验证
+      console.warn('GitHub webhook签名验证尚未完全实现，请在生产环境中完善验证逻辑');
+      return true;
+    } catch (error) {
+      console.error('验证GitHub webhook签名时出错:', error);
+      // 在开发环境中可以返回true，但在生产环境中应返回false
+      return false;
+    }
   }
 
   /**

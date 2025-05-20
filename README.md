@@ -63,28 +63,54 @@ npx wrangler d1 create gitee2github_db
 npx wrangler d1 execute gitee2github_db --remote --file=./migrations/schema.sql
 ```
 
-7. 设置必要的密钥
-```bash
-# GitHub API令牌
-npx wrangler secret put GITHUB_TOKEN
+7. 设置必要的密钥（选择使用个人令牌或GitHub App）
 
-# Gitee API令牌
-npx wrangler secret put GITEE_TOKEN
+   **方式一：使用个人访问令牌（传统方式）**
+   ```bash
+   # GitHub API令牌
+   npx wrangler secret put GITHUB_TOKEN
 
-# Gitee Webhook密钥
-npx wrangler secret put GITEE_WEBHOOK_SECRET
+   # Gitee API令牌
+   npx wrangler secret put GITEE_TOKEN
 
-# GitHub Webhook密钥
-npx wrangler secret put GITHUB_WEBHOOK_SECRET
+   # Gitee Webhook密钥
+   npx wrangler secret put GITEE_WEBHOOK_SECRET
 
-# 管理界面访问密码
-npx wrangler secret put ADMIN_PASSWORD
-```
+   # GitHub Webhook密钥
+   npx wrangler secret put GITHUB_WEBHOOK_SECRET
+
+   # 管理界面访问密码
+   npx wrangler secret put ADMIN_PASSWORD
+   ```
+
+   **方式二：使用GitHub App（推荐方式）**
+   ```bash
+   # GitHub App ID
+   npx wrangler secret put GITHUB_APP_ID
+
+   # GitHub App 私钥（注意处理多行私钥）
+   npx wrangler secret put GITHUB_PRIVATE_KEY
+
+   # GitHub App 安装ID
+   npx wrangler secret put GITHUB_INSTALLATION_ID
+
+   # Gitee API令牌
+   npx wrangler secret put GITEE_TOKEN
+
+   # Gitee Webhook密钥
+   npx wrangler secret put GITEE_WEBHOOK_SECRET
+
+   # GitHub Webhook密钥
+   npx wrangler secret put GITHUB_WEBHOOK_SECRET
+
+   # 管理界面访问密码
+   npx wrangler secret put ADMIN_PASSWORD
+   ```
 
 8. 部署Worker
-```bash
-npx wrangler deploy
-```
+   ```bash
+   npx wrangler deploy
+   ```
 
 ## ⚙️ 配置
 
@@ -94,7 +120,12 @@ npx wrangler deploy
 
 | 环境变量 | 说明 | 获取方式 |
 |----------|------|---------|
-| `GITHUB_TOKEN` | GitHub API访问令牌 | 在GitHub [Personal access tokens](https://github.com/settings/tokens) 页面创建，需要`repo`权限 |
+| GitHub 认证 - 二选一 | | |
+| `GITHUB_TOKEN` | GitHub API访问令牌(个人令牌方式) | 在GitHub [Personal access tokens](https://github.com/settings/tokens) 页面创建，需要`repo`权限 |
+| `GITHUB_APP_ID` | GitHub App ID (推荐) | 创建GitHub App后获取的ID |
+| `GITHUB_PRIVATE_KEY` | GitHub App 私钥 (推荐) | 创建GitHub App时生成的私钥 |
+| `GITHUB_INSTALLATION_ID` | GitHub App 安装ID (推荐) | 将GitHub App安装到组织或仓库后获得的安装ID |
+| 其他配置 | | |
 | `GITEE_TOKEN` | Gitee API访问令牌 | 在Gitee [设置-私人令牌](https://gitee.com/profile/personal_access_tokens) 创建，需要`issues`和`notes`权限 |
 | `GITEE_WEBHOOK_SECRET` | Gitee webhook的密钥 | 自定义密码，与在Gitee仓库中配置Webhook时使用的密码相同 |
 | `GITHUB_WEBHOOK_SECRET` | GitHub webhook的secret | 自定义密码，与在GitHub仓库中配置Webhook时使用的secret相同 |
@@ -116,6 +147,67 @@ npx wrangler deploy
 3. Content type选择: `application/json`
 4. Secret设置为与`GITHUB_WEBHOOK_SECRET`相同的值
 5. 选择事件: Issues、Issue comments
+
+### 设置GitHub App（推荐）
+
+使用GitHub App比个人访问令牌有更多优势，包括更精细的权限控制和更好的安全性。以下是创建和配置GitHub App的步骤：
+
+1. **创建GitHub App**:
+   - 访问 [GitHub Developer Settings](https://github.com/settings/apps) > New GitHub App
+   - 填写App名称（如 "Gitee-GitHub Sync"）
+   - 主页URL：您的项目或组织网站
+   - Webhook URL：`https://<your-worker-url>/webhook/github`
+   - Webhook secret：与`GITHUB_WEBHOOK_SECRET`相同的值
+   - 权限设置：
+     - Repository permissions:
+       - Issues: Read & write
+       - Metadata: Read-only
+   - 事件订阅：
+     - Issues
+     - Issue comment
+
+2. **生成私钥**:
+   - 创建完App后，滚动到页面底部
+   - 点击"Generate a private key"生成并下载私钥文件
+
+3. **安装App到您的组织或仓库**:
+   - 点击左侧的"Install App"
+   - 选择要安装的组织或用户账户
+   - 选择要授权访问的仓库
+   - 点击"Install"
+
+4. **获取必要的信息**:
+   - App ID: 在App设置页面顶部可以找到
+   - 安装ID: 安装App后，您可以在以下URL查找安装ID：
+     `https://github.com/settings/installations/<installation-id>`
+   - 私钥: 之前下载的私钥文件，需要读取内容（**注意格式要求**）
+
+5. **私钥格式转换**:
+   GitHub App 要求使用 **PKCS#8** 格式的私钥，但 GitHub 默认下载的是 **PKCS#1** 格式，需要进行转换：
+
+   ```bash
+   # 将 PKCS#1 格式的私钥转换为 PKCS#8 格式
+   # 确保私钥文件已下载并位于合适的目录
+   openssl pkcs8 -topk8 -inform PEM -outform PEM -in 原始私钥文件.pem -out 转换后私钥文件.pem -nocrypt
+   ```
+   
+   如果不进行转换，可能会遇到以下错误：
+   `[universal-github-app-jwt] Private Key is in PKCS#1 format, but only PKCS#8 is supported.`
+
+6. **配置环境变量**:
+   使用以下命令设置必要的密钥：
+
+   ```bash
+   # 设置GitHub App ID
+   npx wrangler secret put GITHUB_APP_ID
+   
+   # 设置GitHub App私钥（使用转换后的PKCS#8格式私钥）
+   # 确保所有换行符被替换为"\n"
+   cat 转换后私钥文件.pem | tr '\n' 'Z' | sed 's/Z/\\n/g' | npx wrangler secret put GITHUB_PRIVATE_KEY
+   
+   # 设置GitHub App安装ID
+   npx wrangler secret put GITHUB_INSTALLATION_ID
+   ```
 
 ## 💻 管理仓库映射
 
@@ -204,8 +296,13 @@ curl -X POST https://<your-worker-url>/api/repository-mapping \
 如果需要更新任何环境变量(例如TOKEN过期)：
 
 ```bash
-# 更新GitHub TOKEN
+# 更新GitHub TOKEN（个人令牌方式）
 npx wrangler secret put GITHUB_TOKEN
+
+# 更新GitHub App相关参数（App方式）
+npx wrangler secret put GITHUB_APP_ID
+npx wrangler secret put GITHUB_PRIVATE_KEY
+npx wrangler secret put GITHUB_INSTALLATION_ID
 
 # 更新Gitee TOKEN
 npx wrangler secret put GITEE_TOKEN
@@ -213,6 +310,29 @@ npx wrangler secret put GITEE_TOKEN
 # 更新管理界面密码
 npx wrangler secret put ADMIN_PASSWORD
 ```
+
+### GitHub App 私钥处理
+
+如果使用 GitHub App 方式授权，需要特别注意私钥的格式和处理：
+
+1. **格式要求**：GitHub App 认证要求使用 PKCS#8 格式的私钥，但 GitHub 下载的默认是 PKCS#1 格式
+
+2. **格式转换**：
+   ```bash
+   # 转换私钥格式从 PKCS#1 到 PKCS#8
+   openssl pkcs8 -topk8 -inform PEM -outform PEM -in 下载的私钥.pem -out 转换后私钥.pem -nocrypt
+   ```
+
+3. **处理换行符**：环境变量不支持多行内容，需要将私钥处理为单行
+   ```bash
+   # 在macOS/Linux上，可以使用以下命令将多行私钥转换为单行并设置为环境变量
+   cat 转换后私钥.pem | tr '\n' 'Z' | sed 's/Z/\\n/g' | npx wrangler secret put GITHUB_PRIVATE_KEY
+   ```
+
+4. **常见错误**：如果看到以下错误，说明您需要转换私钥格式
+   ```
+   [universal-github-app-jwt] Private Key is in PKCS#1 format, but only PKCS#8 is supported.
+   ```
 
 ### 应用数据库更改
 
@@ -230,7 +350,7 @@ npx wrangler d1 execute gitee2github_db --remote --file=./migrations/your-new-mi
 
 ## 📦 项目结构
 
-```
+```txt
 gitee2github-issue/
 ├── migrations/
 │   └── schema.sql           # 数据库表结构
@@ -238,7 +358,7 @@ gitee2github-issue/
 │   ├── index.ts             # 主入口文件
 │   ├── services/
 │   │   ├── gitee-service.ts # Gitee API服务
-│   │   ├── github-service.ts # GitHub API服务
+│   │   ├── github-service.ts # GitHub API服务（支持个人令牌和GitHub App两种认证方式）
 │   │   └── sync-service.ts  # 同步核心逻辑
 │   ├── static/
 │   │   └── admin.html       # 管理界面

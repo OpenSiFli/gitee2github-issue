@@ -28,6 +28,10 @@
 	 */
 	"vars": { 
 		"GITHUB_API_BASE_URL": "https://api.github.com"
+		// GitHub App相关配置应通过secrets设置，不应在此处硬编码
+		// GITHUB_APP_ID
+		// GITHUB_PRIVATE_KEY
+		// GITHUB_INSTALLATION_ID
 	},
 
 	/**

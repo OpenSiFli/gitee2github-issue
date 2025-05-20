@@ -1,7 +1,12 @@
 // Cloudflare Worker环境类型
 export interface Env {
   DB: D1Database;
-  GITHUB_TOKEN: string;
+  // GitHub 认证选项 - 支持两种方式：个人令牌或 GitHub Apps
+  GITHUB_TOKEN?: string; // 个人访问令牌（可选，向后兼容）
+  GITHUB_APP_ID?: string; // GitHub App ID
+  GITHUB_PRIVATE_KEY?: string; // GitHub App 私钥
+  GITHUB_INSTALLATION_ID?: string; // GitHub App 安装 ID
+  // 其他配置
   GITEE_TOKEN: string;
   GITHUB_API_BASE_URL: string;
   GITEE_WEBHOOK_SECRET: string;
